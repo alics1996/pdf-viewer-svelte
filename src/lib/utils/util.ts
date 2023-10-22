@@ -1,4 +1,4 @@
-import { PreventHover } from "$lib/stores"
+import { PreventHover } from "$utils/stores"
 
 export function backtick(val: any) {
   return '`' + val + '`'

@@ -7,11 +7,11 @@
 
   import { PDFDocument } from 'pdf-lib'
 
-  import { PDFLibDoc, FileName } from '$lib/stores'
-  import { getPDFJsDocument } from '$lib/pdf_utils'
+  import { PDFLibDoc, FileName } from '$utils/stores'
+  import { getPDFJsDocument } from '$utils/pdf_utils'
 
-  import { backtick, canvasCtxNotSupportedError } from '$lib/util'
-  import DocPreview from '$components/DocPreview.svelte'
+  import { backtick, canvasCtxNotSupportedError } from '$utils/util'
+  import DocPreview from '$lib/DocPreview.svelte'
 
   const flipDurationMs = 100
 
@@ -271,7 +271,7 @@
 
     position: relative;
     padding: 4em 0 3em 0;
-    background-color: rgb(223 228 228);
+    background-color: #dfe4e4;
     outline: 2px solid transparent;
     border-radius: 0;
     overflow: hidden;

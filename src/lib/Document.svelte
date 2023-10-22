@@ -1,34 +1,34 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount } from 'svelte'
 
-  import { IntObserver, PDFLibPages } from "$lib/stores";
+  import { IntObserver, PDFLibPages } from '$utils/stores'
 
-  import Page from "$components/Page.svelte";
-  import Toolbar from "$components/Toolbar.svelte";
+  import Page from '$lib/Page.svelte'
+  import Toolbar from '$lib/Toolbar.svelte'
 
-  import "pdfjs-dist/web/pdf_viewer.css";
+  import 'pdfjs-dist/web/pdf_viewer.css'
 
-  let pdfViewerDiv: HTMLElement;
-  let pageViewNum = 1;
+  let pdfViewerDiv: HTMLElement
+  let pageViewNum = 1
 
   onMount(() => {
     $IntObserver = new IntersectionObserver(
       (entries) => {
-        const entry = entries.filter((entry) => entry.isIntersecting).at(-1);
-        if (!entry) return;
+        const entry = entries.filter((entry) => entry.isIntersecting).at(-1)
+        if (!entry) return
 
         const idx = $PDFLibPages.findIndex(
-          (item) => item.pageDiv === entry.target
-        );
-        pageViewNum = idx !== -1 ? idx + 1 : pageViewNum;
+          (item) => item.pageDiv === entry.target,
+        )
+        pageViewNum = idx !== -1 ? idx + 1 : pageViewNum
       },
       {
         root: pdfViewerDiv,
-        rootMargin: "-50% 0px",
+        rootMargin: '-50% 0px',
         threshold: 0,
-      }
-    );
-  });
+      },
+    )
+  })
 </script>
 
 <div class="pdf-viewer-container">

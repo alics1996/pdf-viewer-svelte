@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isCmd } from "$lib/util";
+  import { isCmd } from '$utils/util'
   import {
     AnnotColor,
     AnnotTools,
@@ -8,59 +8,59 @@
     PDFLibPages,
     SelectedTool,
     StoredAnnotations,
-  } from "$lib/stores";
+  } from '$utils/stores'
 
-  export let pageViewNum: number;
-  $: totalPages = $PDFLibPages.length;
+  export let pageViewNum: number
+  $: totalPages = $PDFLibPages.length
 
   async function handleSave() {
-    const pdfDoc = await $PDFLibDoc!.copy();
+    const pdfDoc = await $PDFLibDoc!.copy()
 
-    const storedAnnotations = $StoredAnnotations;
+    const storedAnnotations = $StoredAnnotations
     for (let i = 0; i < storedAnnotations.length; i++) {
-      await storedAnnotations[i].embeddAnnot(pdfDoc);
+      await storedAnnotations[i].embeddAnnot(pdfDoc)
     }
 
-    const pdfData = await pdfDoc.save({ useObjectStreams: false });
-    const blob = new Blob([pdfData], { type: "application/pdf" });
+    const pdfData = await pdfDoc.save({ useObjectStreams: false })
+    const blob = new Blob([pdfData], { type: 'application/pdf' })
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = $FileName;
-    link.click();
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = $FileName
+    link.click()
   }
 
   function validateInput(
     e: Event & {
-      currentTarget: HTMLInputElement;
-    }
+      currentTarget: HTMLInputElement
+    },
   ) {
-    const target = e.currentTarget;
+    const target = e.currentTarget
 
-    const { value, selectionStart, selectionEnd } = target;
-    const length_old = value.length;
+    const { value, selectionStart, selectionEnd } = target
+    const length_old = value.length
 
-    target.value = value.replace(/[^\d]+/g, "");
+    target.value = value.replace(/[^\d]+/g, '')
 
     if (selectionStart !== null && selectionEnd !== null) {
-      const length_new = target.value.length;
+      const length_new = target.value.length
 
-      target.selectionStart = selectionStart - (length_old - length_new);
-      target.selectionEnd = selectionEnd - (length_old - length_new);
+      target.selectionStart = selectionStart - (length_old - length_new)
+      target.selectionEnd = selectionEnd - (length_old - length_new)
     } else {
-      target.selectionStart = target.selectionEnd = target.value.length;
+      target.selectionStart = target.selectionEnd = target.value.length
     }
   }
 
   function scrollPageIntoView(
     e: Event & {
-      currentTarget: HTMLInputElement;
-    }
+      currentTarget: HTMLInputElement
+    },
   ) {
-    const value = parseInt(e.currentTarget.value) || 1;
-    pageViewNum = Math.max(Math.min(value, totalPages), 1);
+    const value = parseInt(e.currentTarget.value) || 1
+    pageViewNum = Math.max(Math.min(value, totalPages), 1)
 
-    $PDFLibPages.at(pageViewNum - 1)?.pageDiv?.scrollIntoView(true);
+    $PDFLibPages.at(pageViewNum - 1)?.pageDiv?.scrollIntoView(true)
   }
 </script>
 
@@ -97,7 +97,7 @@
         on:input={validateInput}
         on:change={scrollPageIntoView}
         on:focus={(e) => {
-          e.currentTarget.select();
+          e.currentTarget.select()
         }}
       />
       / {totalPages}
@@ -111,38 +111,38 @@
 
 <svelte:window
   on:keydown={(e) => {
-    if (isCmd(e)) return;
+    if (isCmd(e)) return
 
-    const target = e.target;
-    const key = e.key.toLowerCase();
+    const target = e.target
+    const key = e.key.toLowerCase()
 
-    if (target instanceof HTMLElement && target.matches("input")) {
-      return;
+    if (target instanceof HTMLElement && target.matches('input')) {
+      return
     }
 
-    if ($SelectedTool !== "" && key === "escape") {
-      SelectedTool.set("");
-      return;
+    if ($SelectedTool !== '' && key === 'escape') {
+      SelectedTool.set('')
+      return
     }
-    if (key === "s" && !e.shiftKey) {
-      e.preventDefault();
-      SelectedTool.set("square");
-      return;
+    if (key === 's' && !e.shiftKey) {
+      e.preventDefault()
+      SelectedTool.set('square')
+      return
     }
-    if (key === "s" && e.shiftKey) {
-      e.preventDefault();
-      SelectedTool.set("signature");
-      return;
+    if (key === 's' && e.shiftKey) {
+      e.preventDefault()
+      SelectedTool.set('signature')
+      return
     }
-    if (key === "a") {
-      e.preventDefault();
-      SelectedTool.set("arrow");
-      return;
+    if (key === 'a') {
+      e.preventDefault()
+      SelectedTool.set('arrow')
+      return
     }
-    if (key === "c") {
-      e.preventDefault();
-      SelectedTool.set("checkmark");
-      return;
+    if (key === 'c') {
+      e.preventDefault()
+      SelectedTool.set('checkmark')
+      return
     }
   }}
 />

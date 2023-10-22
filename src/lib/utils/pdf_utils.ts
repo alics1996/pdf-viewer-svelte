@@ -23,7 +23,7 @@ import {
   Cache,
 } from 'pdf-lib'
 
-import { encodeString, decodeBytes } from '$lib/util'
+import { encodeString, decodeBytes } from '$utils/util'
 import Pako from 'pako'
 
 export async function getPDFJsDocument(
@@ -313,13 +313,14 @@ export function processStream({
 export function updateContentStreamCache(pageLeaf: PDFPageLeaf) {
   for (const { pdfObj } of getContentStreams(pageLeaf)) {
     if (pdfObj instanceof PDFContentStream) {
+      // @ts-ignore
       pdfObj.contentsCache = Cache.populatedBy(pdfObj.computeContents)
-      // pdfObj.contentCache.invalidate()
     }
   }
 }
 
 export function updatePagesCache(pdfDoc: PDFDocument) {
+  // @ts-ignore
   pdfDoc.pageCache = Cache.populatedBy(pdfDoc.computePages);
 }
 

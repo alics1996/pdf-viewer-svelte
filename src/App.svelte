@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Document from './lib/components/Document.svelte'
-  import Dropzone from './lib/components/Dropzone.svelte'
-  import { PDFLibDoc } from './lib/stores'
+  import Document from '$lib/Document.svelte'
+  import Dropzone from '$lib/Dropzone.svelte'
+  import { PDFLibDoc } from '$utils/stores'
 </script>
 
 <main>

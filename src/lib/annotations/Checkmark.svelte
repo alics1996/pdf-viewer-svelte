@@ -1,95 +1,95 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import type { CheckMarkAnnot } from "$annotations/classes";
-  import { attachMouseMoveListener } from "$lib/util";
+  import { onMount } from 'svelte'
+  import type { CheckMarkAnnot } from '$annotations/classes'
+  import { attachMouseMoveListener } from '$utils/util'
   import {
     AnnotColor,
     PreventHover,
     SelectedTool,
     StoredAnnotations,
-  } from "$lib/stores";
+  } from '$utils/stores'
 
-  export let annotObj: CheckMarkAnnot;
-  const minWidth = 15;
+  export let annotObj: CheckMarkAnnot
+  const minWidth = 15
 
-  $: annotPos = annotObj.annotPos;
-  $: annotSize = annotPos.size;
-  $: strokeWidth = [annotSize] && annotObj.opts.strokeWidth;
-  $: offset = strokeWidth * 1.5;
+  $: annotPos = annotObj.annotPos
+  $: annotSize = annotPos.size
+  $: strokeWidth = [annotSize] && annotObj.opts.strokeWidth
+  $: offset = strokeWidth * 1.5
 
   $: checkmarkPath =
     `M 0,${annotSize.height / 2} ` +
     `L ${annotSize.width / 3},${annotSize.height} ` +
-    `L ${annotSize.width},0`;
+    `L ${annotSize.width},0`
 
-  let annotRef: SVGElement;
-  let annotIsFocused = false;
+  let annotRef: SVGElement
+  let annotIsFocused = false
 
-  let annotHovered = false;
+  let annotHovered = false
 
   onMount(() => {
-    annotObj.opts.color = $AnnotColor;
+    annotObj.opts.color = $AnnotColor
 
-    annotPos.start.x -= minWidth / 2;
-    annotPos.start.y += minWidth / 2;
-    annotPos.end.x = annotPos.start.x + minWidth;
-    annotPos.end.y = annotPos.start.y - minWidth;
-  });
+    annotPos.start.x -= minWidth / 2
+    annotPos.start.y += minWidth / 2
+    annotPos.end.x = annotPos.start.x + minWidth
+    annotPos.end.y = annotPos.start.y - minWidth
+  })
 
   $: if (annotRef) {
-    annotRef.style.left = `${annotPos.start.x}px`;
-    annotRef.style.bottom = `${annotPos.end.y}px`;
+    annotRef.style.left = `${annotPos.start.x}px`
+    annotRef.style.bottom = `${annotPos.end.y}px`
   }
 
   function handleResize(e: MouseEvent) {
-    e.stopPropagation();
+    e.stopPropagation()
 
-    const end = annotObj.getCoords(e);
-    end.x -= offset;
-    end.y += offset;
+    const end = annotObj.getCoords(e)
+    end.x -= offset
+    end.y += offset
 
-    const start = annotPos.start;
+    const start = annotPos.start
 
-    const width = end.x - start.x;
-    const height = start.y - end.y;
+    const width = end.x - start.x
+    const height = start.y - end.y
 
-    if (width <= 0 && height <= 0) return;
+    if (width <= 0 && height <= 0) return
 
-    const maxVal = Math.max(width, height, minWidth);
+    const maxVal = Math.max(width, height, minWidth)
     annotPos.end = {
       x: start.x + maxVal,
       y: start.y - maxVal,
-    };
+    }
   }
   function moveAnnotHandler(
-    e: MouseEvent & { currentTarget: EventTarget & SVGElement }
+    e: MouseEvent & { currentTarget: EventTarget & SVGElement },
   ) {
     if (e.button !== 0) {
-      return;
+      return
     }
-    attachMouseMoveListener(handleMoveAnnot, "grabbing");
+    attachMouseMoveListener(handleMoveAnnot, 'grabbing')
 
-    let { x: prevX, y: prevY } = annotObj.getCoords(e);
+    let { x: prevX, y: prevY } = annotObj.getCoords(e)
 
     function handleMoveAnnot(e: MouseEvent) {
       const { x, y } = annotObj.getCoords(e),
         dx = x - prevX,
-        dy = y - prevY;
-      (prevX = x), (prevY = y);
+        dy = y - prevY
+      ;(prevX = x), (prevY = y)
       //
-      (annotPos.start.x += dx), (annotPos.end.x += dx);
-      (annotPos.start.y += dy), (annotPos.end.y += dy);
+      ;(annotPos.start.x += dx), (annotPos.end.x += dx)
+      ;(annotPos.start.y += dy), (annotPos.end.y += dy)
     }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Backspace") {
+    if (e.key === 'Backspace') {
       $StoredAnnotations = $StoredAnnotations.filter(
-        (item) => item !== annotObj
-      );
+        (item) => item !== annotObj,
+      )
     }
-    if (e.key === "Escape") {
-      (document.activeElement as SVGElement).blur();
+    if (e.key === 'Escape') {
+      ;(document.activeElement as SVGElement).blur()
     }
   }
 </script>
@@ -104,8 +104,8 @@
   on:focusin={() => (annotIsFocused = true)}
   on:focusout={() => (annotIsFocused = false)}
   on:mouseenter={() => {
-    if ($PreventHover) return;
-    annotHovered = true;
+    if ($PreventHover) return
+    annotHovered = true
   }}
   on:mouseleave={() => (annotHovered = false)}
   on:keydown={handleKeyDown}
@@ -119,7 +119,7 @@
     fill="none"
   />
 
-  {#if $SelectedTool === ""}
+  {#if $SelectedTool === ''}
     <!-- hover elem -->
     <rect
       x={-offset}
@@ -128,10 +128,11 @@
       width={annotSize.width + offset * 2}
       height={annotSize.height + offset * 2}
       fill="transparent"
-      stroke={annotIsFocused ? "#a0a0a0" : annotHovered ? "#d3d3d3" : "none"}
+      stroke={annotIsFocused ? '#a0a0a0' : annotHovered ? '#d3d3d3' : 'none'}
       stroke-width="1"
     />
     <!-- move controller -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="move-annot"
       cx={annotSize.width / 2}
@@ -141,16 +142,17 @@
     />
   {/if}
 
-  {#if $SelectedTool === "" && annotIsFocused}
+  {#if $SelectedTool === '' && annotIsFocused}
     <!-- move se -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
       cx={annotSize.width + offset}
       cy={annotSize.height + offset}
       r={4}
       on:mousedown={(e) => {
-        if (e.button !== 0) return;
-        attachMouseMoveListener(handleResize, "pointer");
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleResize, 'pointer')
       }}
     />
   {/if}

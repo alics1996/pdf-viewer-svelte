@@ -17,8 +17,8 @@
     "paths": {
       "$src/*": ["./src/*"],
       "$lib/*": ["./src/lib/*"],
-      "$components/*": ["./src/lib/components/*"],
-      "$annotations/*": ["./src/lib/components/annotations/*"]
+      "$utils/*": ["./src/lib/utils/*"],
+      "$annotations/*": ["./src/lib/annotations/*"]
     }
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],

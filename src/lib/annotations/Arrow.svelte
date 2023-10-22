@@ -1,82 +1,82 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import type { ArrowAnnot } from "$annotations/classes";
+  import { onMount } from 'svelte'
+  import type { ArrowAnnot } from '$annotations/classes'
   import {
     AnnotColor,
     PreventHover,
     SelectedTool,
     StoredAnnotations,
-  } from "$lib/stores";
-  import { attachMouseMoveListener } from "$lib/util";
+  } from '$utils/stores'
+  import { attachMouseMoveListener } from '$utils/util'
 
-  export let annotObj: ArrowAnnot;
+  export let annotObj: ArrowAnnot
   // annotObj.opts.strokeWidth = Math.floor(Math.random() * (10 - 2 + 1) + 2)
 
-  $: annotPos = annotObj.annotPos;
-  $: arrowTip = [annotPos] && annotObj.arrowTip;
-  $: annotSize = annotPos.size;
-  $: strokeWidth = annotObj.opts.strokeWidth;
-  $: headLength = annotObj.headLength;
+  $: annotPos = annotObj.annotPos
+  $: arrowTip = [annotPos] && annotObj.arrowTip
+  $: annotSize = annotPos.size
+  $: strokeWidth = annotObj.opts.strokeWidth
+  $: headLength = annotObj.headLength
 
   $: arrowPath =
     `M 0,0 ` +
     `L ${annotSize.width},${annotSize.height} ` +
     `M ${arrowTip.xLeft},${arrowTip.yLeft} ` +
     `L ${annotSize.width},${annotSize.height} ` +
-    `L ${arrowTip.xRight},${arrowTip.yRight}`;
+    `L ${arrowTip.xRight},${arrowTip.yRight}`
 
-  let annotRef: SVGElement;
-  let annotIsFocused = false;
-  let annotHovered = false;
+  let annotRef: SVGElement
+  let annotIsFocused = false
+  let annotHovered = false
 
   onMount(() => {
-    annotObj.opts.color = $AnnotColor;
-    attachMouseMoveListener(handleMovePointer);
-  });
+    annotObj.opts.color = $AnnotColor
+    attachMouseMoveListener(handleMovePointer)
+  })
 
   $: if (annotRef) {
-    annotRef.style.left = `${Math.min(annotPos.start.x, annotPos.end.x)}px`;
-    annotRef.style.bottom = `${Math.min(annotPos.start.y, annotPos.end.y)}px`;
+    annotRef.style.left = `${Math.min(annotPos.start.x, annotPos.end.x)}px`
+    annotRef.style.bottom = `${Math.min(annotPos.start.y, annotPos.end.y)}px`
 
-    const { scaleX, scaleY } = annotPos.transform;
-    annotRef.style.transform = `scale(${scaleX},${scaleY})`;
+    const { scaleX, scaleY } = annotPos.transform
+    annotRef.style.transform = `scale(${scaleX},${scaleY})`
   }
 
   function handleMovePointer(e: MouseEvent) {
-    e.stopPropagation();
-    annotPos.end = annotObj.getCoords(e);
+    e.stopPropagation()
+    annotPos.end = annotObj.getCoords(e)
   }
   function handleMoveOrigin(e: MouseEvent) {
-    e.stopPropagation();
-    annotPos.start = annotObj.getCoords(e);
+    e.stopPropagation()
+    annotPos.start = annotObj.getCoords(e)
   }
   function moveAnnotHandler(e: MouseEvent) {
     if (e.button !== 0) {
-      return;
+      return
     }
-    attachMouseMoveListener(handleMoveArrow, "grabbing");
+    attachMouseMoveListener(handleMoveArrow, 'grabbing')
 
-    let { x: prevX, y: prevY } = annotObj.getCoords(e);
+    let { x: prevX, y: prevY } = annotObj.getCoords(e)
 
     function handleMoveArrow(e: MouseEvent) {
       const { x, y } = annotObj.getCoords(e),
         dx = x - prevX,
-        dy = y - prevY;
-      (prevX = x), (prevY = y);
+        dy = y - prevY
+      ;(prevX = x), (prevY = y)
       //
-      (annotPos.start.x += dx), (annotPos.end.x += dx);
-      (annotPos.start.y += dy), (annotPos.end.y += dy);
+      ;(annotPos.start.x += dx), (annotPos.end.x += dx)
+      ;(annotPos.start.y += dy), (annotPos.end.y += dy)
     }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Backspace") {
+    if (e.key === 'Backspace') {
       $StoredAnnotations = $StoredAnnotations.filter(
-        (item) => item !== annotObj
-      );
+        (item) => item !== annotObj,
+      )
     }
-    if (e.key === "Escape") {
-      (document.activeElement as SVGElement).blur();
+    if (e.key === 'Escape') {
+      ;(document.activeElement as SVGElement).blur()
     }
   }
 </script>
@@ -91,8 +91,8 @@
   on:focusin={() => (annotIsFocused = true)}
   on:focusout={() => (annotIsFocused = false)}
   on:mouseenter={() => {
-    if ($PreventHover) return;
-    annotHovered = true;
+    if ($PreventHover) return
+    annotHovered = true
   }}
   on:mouseleave={() => (annotHovered = false)}
   on:keydown={handleKeyDown}
@@ -105,7 +105,7 @@
     fill="none"
   />
 
-  {#if $SelectedTool === ""}
+  {#if $SelectedTool === ''}
     <!-- hover elem -->
     <rect
       x={-headLength / 2}
@@ -114,10 +114,11 @@
       width={annotSize.width + headLength}
       height={annotSize.height + headLength}
       fill="transparent"
-      stroke={annotIsFocused ? "#a0a0a0" : annotHovered ? "#d3d3d3" : "none"}
+      stroke={annotIsFocused ? '#a0a0a0' : annotHovered ? '#d3d3d3' : 'none'}
       stroke-width="1"
     />
     <!-- move controller -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <line
       class="move-annot"
       x1="0"
@@ -129,27 +130,29 @@
     />
   {/if}
 
-  {#if $SelectedTool === "" && annotIsFocused}
+  {#if $SelectedTool === '' && annotIsFocused}
     <!-- origin controller -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
       cx="0"
       cy="0"
       r={3.5}
       on:mousedown={(e) => {
-        if (e.button !== 0) return;
-        attachMouseMoveListener(handleMoveOrigin, "pointer");
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleMoveOrigin, 'pointer')
       }}
     />
     <!-- pointer controller -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
       cx={annotSize.width}
       cy={annotSize.height}
       r={3.5}
       on:mousedown={(e) => {
-        if (e.button !== 0) return;
-        attachMouseMoveListener(handleMovePointer, "pointer");
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleMovePointer, 'pointer')
       }}
     />
   {/if}

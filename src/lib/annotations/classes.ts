@@ -19,8 +19,8 @@ import {
   drawObject
 } from 'pdf-lib'
 import tinycolor from 'tinycolor2'
-import { PDFLibPages, type PDFLibPageType } from '$lib/stores'
-import { canvasCtxNotSupportedError } from '$lib/util'
+import { PDFLibPages, type PDFLibPageType } from '$utils/stores'
+import { canvasCtxNotSupportedError } from '$utils/util'
 
 let storedPages: PDFLibPageType[] = []
 PDFLibPages.subscribe((val) => { storedPages = val })

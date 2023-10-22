@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store'
 import type { PDFPage, PDFDocument } from 'pdf-lib'
 import type { Annotation } from '$annotations/classes'
-import { updatePagesCache } from '$lib/pdf_utils'
+import { updatePagesCache } from '$utils/pdf_utils'
 
 export const FileName = writable('document.pdf')
 

@@ -1,21 +1,22 @@
 <script lang="ts">
-  export let file: File;
-  export let deleteItem: () => void;
-  export let numPages: number;
-  export let imgSrc: string;
+  export let file: File
+  export let deleteItem: () => void
+  export let numPages: number
+  export let imgSrc: string
 
-  const fileName = file.name;
-  const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+  const fileName = file.name
+  const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB'
 
-  let showPopOver = false;
+  let showPopOver = false
   function displayPopOver() {
-    showPopOver = true;
+    showPopOver = true
   }
   function hidePopOver() {
-    showPopOver = false;
+    showPopOver = false
   }
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   class="flex-container"
   on:mouseenter={displayPopOver}
@@ -24,8 +25,8 @@
   <div
     class="trash-icon"
     on:click={(e) => {
-      e.stopPropagation();
-      deleteItem();
+      e.stopPropagation()
+      deleteItem()
     }}
     on:keydown={() => {}}
   >
@@ -41,7 +42,7 @@
   </div>
   {#if showPopOver}
     <div class="pop-over">
-      <div>{numPages + (numPages === 1 ? " page" : " pages")}</div>
+      <div>{numPages + (numPages === 1 ? ' page' : ' pages')}</div>
       <div>{fileSize}</div>
     </div>
   {/if}

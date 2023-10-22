@@ -15,8 +15,8 @@ export default defineConfig({
     alias: {
       $src: path.resolve('./src/'),
       $lib: path.resolve('./src/lib/'),
-      $components: path.resolve('./src/lib/components'),
-      $annotations: path.resolve('./src/lib/components/annotations/')
+      $utils: path.resolve("./src/lib/utils/"),
+      $annotations: path.resolve('./src/lib/annotations/')
     }
   }
 })
