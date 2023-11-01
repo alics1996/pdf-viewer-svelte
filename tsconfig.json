@@ -14,9 +14,11 @@
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
+    "baseUrl": "./",
     "paths": {
       "$src/*": ["./src/*"],
       "$lib/*": ["./src/lib/*"],
+      "$pdf.js/*": ["./src/lib/pdf.js/*"],
       "$utils/*": ["./src/lib/utils/*"],
       "$annotations/*": ["./src/lib/annotations/*"]
     }

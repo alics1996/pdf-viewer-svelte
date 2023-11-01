@@ -22,11 +22,21 @@
     ImageAnnot,
     SquareAnnot,
   } from '$annotations/classes'
-  import SquareAnnotation from '$annotations/Rectangle.svelte'
-  import ArrowAnnotation from '$annotations/Arrow.svelte'
-  import CheckMarkAnnotation from '$annotations/Checkmark.svelte'
-  import ImageAnnotation from '$annotations/Image.svelte'
-  import { canvasCtxNotSupportedError } from '$utils/util'
+
+  import {
+    ArrowAnnotation,
+    CheckmarkAnnotation,
+    RectangleAnnotation,
+    ImageAnnotation,
+  } from '$annotations/index'
+
+  import {
+    canvasCtxNotSupportedError,
+    getImageFromSrc,
+    isString,
+    readInput,
+    unexpectedReturnTypeError,
+  } from '$utils/util'
 
   let pageContextMenu: PageContextMenu
 
@@ -69,28 +79,6 @@
     )
   })
 
-  $: [$SelectedTool] && updateCursor()
-  function updateCursor() {
-    if (!isMounted) return
-
-    switch ($SelectedTool) {
-      case 'square':
-      case 'arrow':
-      case 'checkmark':
-      case 'signature':
-        window.getSelection()?.removeAllRanges()
-        ;(document.activeElement as HTMLElement | SVGElement)?.blur()
-
-        textLayerRef.style.display = 'none'
-        pageDiv.style.cursor = 'crosshair'
-        break
-      default:
-        textLayerRef.style.display = ''
-        pageDiv.style.cursor = ''
-        break
-    }
-  }
-
   async function renderPage() {
     const pdfJsDoc = await getPDFJsDocument($PDFLibDoc!)
     const pdfJsPage = await pdfJsDoc.getPage(pageIdx + 1)
@@ -117,9 +105,10 @@
     }).promise
   }
 
-  function handleMouseDown(event: MouseEvent) {
+  async function handleMouseDown(event: MouseEvent) {
     if (!$SelectedTool || event.button !== 0) return
     event.preventDefault()
+    event.stopPropagation()
 
     const boundingRect = pageDiv.getBoundingClientRect()
     const annotPos = new AnnotPos()
@@ -135,41 +124,59 @@
     annotPos.end = { x: annotPos.start.x, y: annotPos.start.y }
 
     switch ($SelectedTool) {
-      case 'square':
+      case 'square': {
         StoredAnnotations.update((annotsArr) => {
           annotsArr.push(new SquareAnnot(pageId, annotPos, pageDiv))
           return annotsArr
         })
         break
-      case 'arrow':
+      }
+      case 'arrow': {
         StoredAnnotations.update((annotsArr) => {
           annotsArr.push(new ArrowAnnot(pageId, annotPos, pageDiv))
           return annotsArr
         })
         break
-      case 'checkmark':
+      }
+      case 'checkmark': {
         StoredAnnotations.update((annotsArr) => {
           annotsArr.push(new CheckMarkAnnot(pageId, annotPos, pageDiv))
           return annotsArr
         })
         break
-      case 'signature':
-        const image = new Image()
-        image.crossOrigin = 'anonymous'
-
-        new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve()
-          image.onerror = () => reject()
-
-          image.src = './images/signature.png'
-        })
-          .then(() => {
-            StoredAnnotations.update((annotsArr) => {
-              annotsArr.push(new ImageAnnot(pageId, annotPos, pageDiv, image))
-              return annotsArr
-            })
+      }
+      case 'signature': {
+        try {
+          const img = await getImageFromSrc('./signature.png')
+          StoredAnnotations.update((annotsArr) => {
+            annotsArr.push(new ImageAnnot(pageId, annotPos, pageDiv, img))
+            return annotsArr
           })
-          .catch(() => {})
+        } catch (error) {
+          console.warn(error)
+        }
+        break
+      }
+      case 'image': {
+        try {
+          const filesData = await readInput(
+            { accept: 'image/*', multiple: false },
+            'readAsDataURL',
+          )
+          const urlString = filesData.at(0)?.data
+          if (!isString(urlString)) {
+            throw unexpectedReturnTypeError(urlString, 'readInput', 'string')
+          }
+          const img = await getImageFromSrc(urlString as string)
+          StoredAnnotations.update((annotsArr) => {
+            annotsArr.push(new ImageAnnot(pageId, annotPos, pageDiv, img))
+            return annotsArr
+          })
+        } catch (error) {
+          console.warn(error)
+        }
+        break
+      }
     }
   }
 </script>
@@ -185,17 +192,17 @@
     }
     pageContextMenu.rightClickContextMenu(e)
   }}
-  on:mousedown|stopPropagation={handleMouseDown}
+  on:mousedown={handleMouseDown}
   bind:this={pageDiv}
 >
   <div class="annotLayer" bind:this={annotLayerRef}>
     {#each pageAnnots as item (item.id)}
       {#if item instanceof SquareAnnot}
-        <SquareAnnotation annotObj={item} />
+        <RectangleAnnotation annotObj={item} />
       {:else if item instanceof ArrowAnnot}
         <ArrowAnnotation annotObj={item} />
       {:else if item instanceof CheckMarkAnnot}
-        <CheckMarkAnnotation annotObj={item} />
+        <CheckmarkAnnotation annotObj={item} />
       {:else if item instanceof ImageAnnot}
         <ImageAnnotation annotObj={item} />
       {/if}
@@ -224,6 +231,10 @@
   .annotLayer {
     position: absolute;
     overflow: hidden;
-    z-index: 5;
+  }
+  /* make annot obj be on top of text layer, but text layer should be */
+  /* above the annot layer div, otherwise text is not selectable */
+  .annotLayer :global(.annotation-object) {
+    z-index: 10;
   }
 </style>

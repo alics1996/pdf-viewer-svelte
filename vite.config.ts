@@ -15,6 +15,7 @@ export default defineConfig({
     alias: {
       $src: path.resolve('./src/'),
       $lib: path.resolve('./src/lib/'),
+      "$pdf.js": path.resolve('./src/lib/pdf.js/'),
       $utils: path.resolve("./src/lib/utils/"),
       $annotations: path.resolve('./src/lib/annotations/')
     }

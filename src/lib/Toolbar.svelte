@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { isCmd } from '$utils/util'
+  import Fa from 'svelte-fa'
+  import { faHouse } from '@fortawesome/free-solid-svg-icons'
+
   import {
-    AnnotColor,
-    AnnotTools,
     FileName,
     PDFLibDoc,
     PDFLibPages,
-    SelectedTool,
     StoredAnnotations,
   } from '$utils/stores'
 
@@ -70,37 +69,25 @@
       <button
         type="button"
         id="home-button"
-        on:click={() => PDFLibDoc.set(null)}>⌂</button
+        on:click={() => PDFLibDoc.set(undefined)}
       >
-      <select name="tool" id="tool-select" bind:value={$SelectedTool}>
-        {#each AnnotTools as item}
-          <option value={item}>{item}</option>
-        {/each}
-      </select>
-      <input
-        type="color"
-        list="preset-colors"
-        id="color-picker"
-        bind:value={$AnnotColor}
-      />
-      <datalist id="preset-colors">
-        <option>#eb1a30</option>
-        <option>#000000</option>
-        <option>#ffffff</option>
-      </datalist>
+        <Fa icon={faHouse} />
+      </button>
     </div>
 
     <div class="div-2">
-      <input
-        type="text"
-        bind:value={pageViewNum}
-        on:input={validateInput}
-        on:change={scrollPageIntoView}
-        on:focus={(e) => {
-          e.currentTarget.select()
-        }}
-      />
-      / {totalPages}
+      <div>
+        <input
+          type="text"
+          bind:value={pageViewNum}
+          on:input={validateInput}
+          on:change={scrollPageIntoView}
+          on:focus={(e) => {
+            e.currentTarget.select()
+          }}
+        />
+        / {totalPages}
+      </div>
     </div>
 
     <div class="div-3">
@@ -109,55 +96,18 @@
   </div>
 </section>
 
-<svelte:window
-  on:keydown={(e) => {
-    if (isCmd(e)) return
-
-    const target = e.target
-    const key = e.key.toLowerCase()
-
-    if (target instanceof HTMLElement && target.matches('input')) {
-      return
-    }
-
-    if ($SelectedTool !== '' && key === 'escape') {
-      SelectedTool.set('')
-      return
-    }
-    if (key === 's' && !e.shiftKey) {
-      e.preventDefault()
-      SelectedTool.set('square')
-      return
-    }
-    if (key === 's' && e.shiftKey) {
-      e.preventDefault()
-      SelectedTool.set('signature')
-      return
-    }
-    if (key === 'a') {
-      e.preventDefault()
-      SelectedTool.set('arrow')
-      return
-    }
-    if (key === 'c') {
-      e.preventDefault()
-      SelectedTool.set('checkmark')
-      return
-    }
-  }}
-/>
-
 <style lang="scss">
   .toolbar {
     position: sticky;
     top: 0;
-    z-index: 50;
+    font-size: 0.8em;
+    z-index: 9999;
     background-color: #fff;
     width: 100%;
     padding: 2px 5px;
-    border: 1px solid black;
+    border-bottom: 1px solid black;
     box-sizing: border-box;
-    height: 30px;
+    height: 2.5em;
 
     .toolbar-buttons {
       display: flex;
@@ -171,10 +121,13 @@
         align-items: center;
 
         input,
-        button,
-        select {
+        button {
           margin: 0;
-          height: 25px;
+          height: 2em;
+          padding: 0.4em 0.7em;
+          font-size: inherit;
+          border: 0 solid transparent;
+          outline: 0 solid transparent;
           text-align: center;
           vertical-align: middle;
           box-sizing: border-box;
@@ -185,9 +138,10 @@
       }
       .div-2 {
         justify-content: center;
+        gap: 10px;
         input {
           width: 30px;
-          margin: 0 3px;
+          // margin: 0 3px;
         }
       }
       .div-3 {

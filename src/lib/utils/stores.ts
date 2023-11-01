@@ -5,9 +5,9 @@ import { updatePagesCache } from '$utils/pdf_utils'
 
 export const FileName = writable('document.pdf')
 
-export const PDFLibDoc = writable<PDFDocument | null>()
+export const PDFLibDoc = writable<PDFDocument | undefined>()
 
-let _PDFLibDoc: PDFDocument | null = null
+let _PDFLibDoc: PDFDocument | undefined = undefined
 PDFLibDoc.subscribe((pdfDoc) => { _PDFLibDoc = pdfDoc })
 
 export type PDFLibPageType = {
@@ -45,11 +45,11 @@ export function deletePage(index: number) {
   PDFLibPages.update(pagesArray => pagesArray.filter((_, i) => i !== index))
 }
 
-export const AnnotTools = ['', 'square', 'arrow', 'checkmark', 'signature']
+export const AnnotTools = ['', 'square', 'arrow', 'checkmark', 'signature', 'image'] as const
 
 export const AnnotColor = writable<string>('#eb1a30')
 
-export const SelectedTool = writable('')
+export const SelectedTool = writable<typeof AnnotTools[number]>('')
 
 export const IntObserver = writable<IntersectionObserver>()
 

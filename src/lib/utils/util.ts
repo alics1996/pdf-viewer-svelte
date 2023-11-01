@@ -1,5 +1,90 @@
 import { PreventHover } from "$utils/stores"
 
+
+/**
+ * A type that represents an indivisible union of two types.
+ * 
+ * It enforces that all properties of the second type must be either present in the
+ * first type or completely absent.
+ * 
+ * @template T1 - The first type.
+ * @template T2 - The second type.
+ */
+export type IndivisibleUnion<T1, T2> = (
+  | T1 & { [K in keyof T2]?: undefined; } // make optional props : never
+  | T1 & T2
+)
+
+export function readInput(
+  inputOps: Pick<HTMLInputElement, 'accept' | 'multiple'>,
+  readAsMethod: 'readAsDataURL' | 'readAsText' | 'readAsArrayBuffer' | 'readAsBinaryString',
+  promiseTimeout = 5000,
+) {
+  type ReadInputStore = {
+    file: File,
+    data: FileReader['result']
+  }
+
+  return new Promise<ReadInputStore[]>((resolve, reject) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    Object.assign(input, inputOps)
+
+    input.oninput = () => {
+      const files = input.files
+      if (!files || !files.length) {
+        reject(new Error('No files to read.'))
+        return
+      }
+      // read filelist
+      const promises: Promise<ReadInputStore>[] = []
+      for (let i = 0; i < files.length; i++) {
+        const promise = new Promise<ReadInputStore>((res, rej) => {
+          const file = files[i]
+          const reader = new FileReader()
+          reader.onload = () => {
+            const data = reader.result
+            res({ file, data })
+          }
+          reader.onerror = () => {
+            rej(new Error('Error reading the file: ' + file.name))
+          }
+
+          reader[readAsMethod](file)
+        })
+        promises.push(promise)
+      }
+      Promise.allSettled(promises).then((data) => {
+        resolve(
+          data.filter(
+            (item): item is { value: ReadInputStore, status: 'fulfilled' } =>
+              item.status === 'fulfilled'
+          ).map(item => item.value)
+        )
+      })
+    }
+    input.click()
+    // input dialog is closed event
+    window.addEventListener('focus', () => {
+      setTimeout(reject, promiseTimeout, new Error('Promise timed-out, no files selected.'))
+    }, { once: true })
+  })
+}
+
+export function getImageFromSrc(
+  src: string,
+  imgOpts?: Pick<HTMLImageElement, 'crossOrigin'>
+) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    Object.assign(img, imgOpts)
+
+    img.onload = () => { resolve(img) }
+    img.onerror = () => { reject(new Error('Error loading the image.')) }
+    img.src = src
+  })
+}
+
 export function backtick(val: any) {
   return '`' + val + '`'
 }
@@ -89,4 +174,11 @@ export function throttle(callback: Function, delay: number) {
 export const canvasCtxNotSupportedError = new Error(
   "canvas.getContext() returned 'null': context identifier is not supported.",
 )
+
+export const unexpectedReturnTypeError = (result: any, nameFunc: string, expectedType: string) => {
+  return new Error(
+    `${nameFunc} returned ${backtick(result?.constructor.name || result)
+    } instead of ${backtick(expectedType)}`
+  )
+}
 

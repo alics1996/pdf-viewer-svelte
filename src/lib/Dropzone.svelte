@@ -8,11 +8,11 @@
   import { PDFDocument } from 'pdf-lib'
 
   import { PDFLibDoc, FileName } from '$utils/stores'
-  import { getPDFJsDocument } from '$utils/pdf_utils'
+  import { LoadedFiles, pushToLoadedFiles, type LoadedFileT } from '$lib/stores'
 
-  import { backtick, canvasCtxNotSupportedError } from '$utils/util'
-  import DocPreview from '$lib/DocPreview.svelte'
+  import FilePreview from '$lib/FilePreview.svelte'
 
+  let loadedFilesProcessed = true
   const flipDurationMs = 100
 
   let enterTarget: EventTarget | null
@@ -57,93 +57,39 @@
     fileInput.click()
   }
 
-  let files: {
-    id: number
-    file: File
-    pdfData: ArrayBuffer
-    numPages: number
-    imgSrc: string
-  }[] = []
-  let filesId = 0
+  type FilteredFileT = LoadedFileT & { pdfDoc: PDFDocument }
+  let filteredLoadedFiles: FilteredFileT[] = []
+  $: filteredLoadedFiles = $LoadedFiles.filter(
+    (item): item is FilteredFileT => !!item.pdfDoc,
+  )
 
-  async function readFileList(fileList: FileList) {
-    const reader = new FileReader()
-
-    for (const file of fileList) {
-      const buffer = await new Promise<string | ArrayBuffer | null>(
-        (resolve, reject) => {
-          reader.onload = () => resolve(reader.result)
-          reader.onerror = (error) => {
-            console.error('Error reading the file!\n', error)
-            reject()
-          }
-          reader.readAsArrayBuffer(file)
-        },
-      )
-      if (buffer instanceof ArrayBuffer) {
-        const pdfDoc = await getPDFJsDocument(buffer.slice(0))
-
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) throw canvasCtxNotSupportedError
-
-        const page = await pdfDoc.getPage(1)
-        const scale = 0.5
-
-        const viewport = page.getViewport({ scale })
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-
-        const renderContext = {
-          canvasContext: ctx,
-          viewport,
-        }
-        await page.render(renderContext).promise
-
-        const numPages = pdfDoc.numPages
-        const imgSrc = canvas.toDataURL()
-        files.push({
-          id: filesId++,
-          pdfData: buffer,
-          file,
-          numPages,
-          imgSrc,
-        })
-      } else {
-        throw Error(
-          'FileReader returned ' +
-            backtick(buffer && buffer.constructor.name) +
-            ', instead of' +
-            backtick('ArrayBuffer'),
-        )
-      }
-    }
-    files = files
+  function readFileList(fileList: FileList) {
+    loadedFilesProcessed = false
+    pushToLoadedFiles(fileList).then(() => (loadedFilesProcessed = true))
   }
 
-  type ItemType = (typeof files)[number]
-  function handleConsider(e: CustomEvent<DndEvent<ItemType>>) {
-    files = e.detail.items
+  function handleConsider(e: CustomEvent<DndEvent<LoadedFileT>>) {
+    $LoadedFiles = e.detail.items
   }
-  function handleFinalize(e: CustomEvent<DndEvent<ItemType>>) {
-    files = e.detail.items
+  function handleFinalize(e: CustomEvent<DndEvent<LoadedFileT>>) {
+    $LoadedFiles = e.detail.items
   }
 
   async function loadPdfHandler() {
-    if (files.length === 0) return
+    if (filteredLoadedFiles.length === 0) return
 
-    if (files.length === 1) {
-      const file = files[0]
+    if (filteredLoadedFiles.length === 1) {
+      const file = filteredLoadedFiles[0]
 
-      FileName.set(file.file.name)
-      PDFLibDoc.set(await PDFDocument.load(file.pdfData))
+      FileName.set(file.fileName)
+      PDFLibDoc.set(file.pdfDoc)
       return
     }
 
     const mergedPdf = await PDFDocument.create()
 
-    for (const file of files) {
-      const pdfDoc = await PDFDocument.load(file.pdfData)
+    for (const arrItem of filteredLoadedFiles) {
+      const pdfDoc = arrItem.pdfDoc
       const copiedPages = await mergedPdf.copyPages(
         pdfDoc,
         pdfDoc.getPageIndices(),
@@ -156,24 +102,6 @@
 
     FileName.set('mergedPdf.pdf')
     PDFLibDoc.set(mergedPdf)
-  }
-
-  async function loadTestDocument() {
-    fetch('/tracemonkey.pdf')
-      .then((data) => {
-        if (!data.ok) {
-          throw new Error('Network response not ok')
-        }
-        return data.arrayBuffer()
-      })
-      .then(async (data) => {
-        const pdfDoc = await PDFDocument.load(data)
-        FileName.set('document.pdf')
-        PDFLibDoc.set(pdfDoc)
-      })
-      .catch((err) => {
-        console.error('Error loading the file:', err)
-      })
   }
 </script>
 
@@ -189,43 +117,34 @@
     on:drop={dropHandler}
     on:click={inputHandler}
   >
-    {#if !files.length}
-      <div class="dropzone-content">
-        <div>
-          <Fa icon={faCloudArrowUp} color="#7d91a0" size="2.5em" />
-          <br />
-          <strong>Drag and Drop file(s) here</strong>
-        </div>
-        <div class="text separator"><span>or</span></div>
-        <div>
-          <button type="button" id="browse-files-btn">Browse Files</button>
-        </div>
-        <div class="text">
-          Accepted file types: <strong>*.pdf</strong> only.
-        </div>
+    <div class="dropzone-content">
+      <div>
+        <Fa icon={faCloudArrowUp} color="#7d91a0" size="2.5em" />
+        <br />
+        <strong>Drag and Drop file(s) here</strong>
       </div>
-    {/if}
+      <div class="text separator"><span>or</span></div>
+      <div>
+        <button type="button" id="browse-files-btn">Browse Files</button>
+      </div>
+      <div class="text">
+        Accepted file types: <strong>*.pdf</strong> only.
+      </div>
+    </div>
   </div>
   <div
-    class="uploaded-files"
+    id="uploaded-files"
     use:dndzone={{
-      items: files,
+      items: $LoadedFiles,
       flipDurationMs,
-      dropTargetStyle: {},
+      dropTargetStyle: { outline: '1px solid gray' },
     }}
     on:consider={handleConsider}
     on:finalize={handleFinalize}
   >
-    {#each files as item (item.id)}
-      <div animate:flip={{ duration: flipDurationMs }} class="file-item">
-        <DocPreview
-          file={item.file}
-          deleteItem={() => {
-            files = files.filter((i) => i !== item)
-          }}
-          numPages={item.numPages}
-          imgSrc={item.imgSrc}
-        />
+    {#each $LoadedFiles as item (item.id)}
+      <div animate:flip={{ duration: flipDurationMs }}>
+        <FilePreview fileStore={item} />
       </div>
     {/each}
   </div>
@@ -235,18 +154,19 @@
       <button
         id="load-files-btn"
         on:click={loadPdfHandler}
-        disabled={!files.length}>Load Files</button
+        disabled={!filteredLoadedFiles.length || !loadedFilesProcessed}
+        >Load Files</button
       >
     </div>
   </div>
 </div>
 
 <style lang="scss">
-  * {
-    // border: 1px solid blue;
-  }
+  // * {
+  // border: 1px solid blue;
+  // }
   .dropzone-wrapper {
-    min-width: 650px;
+    width: 650px;
     background-color: whitesmoke;
     border-radius: 0.5em;
     padding: 2em;
@@ -317,16 +237,8 @@
     }
   }
 
-  .file-item {
-    position: relative;
-    display: inline-block;
-    vertical-align: top;
-    margin: 2px;
-    cursor: move;
-    width: 145px;
-  }
-
   #uploaded-files {
+    border: 1px solid transparent;
   }
 
   #form {
@@ -334,19 +246,23 @@
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;
-    // margin-top: 5px;
-    // border: 2px solid transparent;
-    // padding: 2px;
 
     #load-files-btn {
-      $col: #333;
+      $col: #fff;
       $bg_col: #005df3;
 
       font-size: 0.9em;
       padding: 0.6em 1.6em;
+      color: $col;
       background-color: $bg_col;
       font-weight: bold;
 
+      transition: background-color 0.2s linear;
+
+      &:hover {
+        color: darken($col, 5%);
+        background-color: darken($bg_col, 5%);
+      }
       &:disabled {
         background-color: #ddd;
         color: whitesmoke;

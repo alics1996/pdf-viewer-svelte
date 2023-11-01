@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { ArrowAnnot } from '$annotations/classes'
+
+  import type { SquareAnnot } from '$annotations/classes'
   import {
     AnnotColor,
     PreventHover,
@@ -9,21 +10,12 @@
   } from '$utils/stores'
   import { attachMouseMoveListener } from '$utils/util'
 
-  export let annotObj: ArrowAnnot
+  export let annotObj: SquareAnnot
   // annotObj.opts.strokeWidth = Math.floor(Math.random() * (10 - 2 + 1) + 2)
 
   $: annotPos = annotObj.annotPos
-  $: arrowTip = [annotPos] && annotObj.arrowTip
   $: annotSize = annotPos.size
   $: strokeWidth = annotObj.opts.strokeWidth
-  $: headLength = annotObj.headLength
-
-  $: arrowPath =
-    `M 0,0 ` +
-    `L ${annotSize.width},${annotSize.height} ` +
-    `M ${arrowTip.xLeft},${arrowTip.yLeft} ` +
-    `L ${annotSize.width},${annotSize.height} ` +
-    `L ${arrowTip.xRight},${arrowTip.yRight}`
 
   let annotRef: SVGElement
   let annotIsFocused = false
@@ -31,7 +23,7 @@
 
   onMount(() => {
     annotObj.opts.color = $AnnotColor
-    attachMouseMoveListener(handleMovePointer)
+    attachMouseMoveListener(handleSeResize)
   })
 
   $: if (annotRef) {
@@ -42,23 +34,39 @@
     annotRef.style.transform = `scale(${scaleX},${scaleY})`
   }
 
-  function handleMovePointer(e: MouseEvent) {
+  $: [$AnnotColor] && updateColor()
+  function updateColor() {
+    if (!annotIsFocused) return
+    annotObj.opts.color = $AnnotColor
+  }
+
+  function handleNeResize(e: MouseEvent) {
+    e.stopPropagation()
+    const { x, y } = annotObj.getCoords(e)
+    ;(annotPos.end.x = x), (annotPos.start.y = y)
+  }
+  function handleNwResize(e: MouseEvent) {
+    e.stopPropagation()
+    annotPos.start = annotObj.getCoords(e)
+  }
+  function handleSeResize(e: MouseEvent) {
     e.stopPropagation()
     annotPos.end = annotObj.getCoords(e)
   }
-  function handleMoveOrigin(e: MouseEvent) {
+  function handleSwResize(e: MouseEvent) {
     e.stopPropagation()
-    annotPos.start = annotObj.getCoords(e)
+    const { x, y } = annotObj.getCoords(e)
+    ;(annotPos.start.x = x), (annotPos.end.y = y)
   }
   function moveAnnotHandler(e: MouseEvent) {
     if (e.button !== 0) {
       return
     }
-    attachMouseMoveListener(handleMoveArrow, 'grabbing')
+    attachMouseMoveListener(handleMoveAnnot, 'grabbing')
 
     let { x: prevX, y: prevY } = annotObj.getCoords(e)
 
-    function handleMoveArrow(e: MouseEvent) {
+    function handleMoveAnnot(e: MouseEvent) {
       const { x, y } = annotObj.getCoords(e),
         dx = x - prevX,
         dy = y - prevY
@@ -79,10 +87,38 @@
       ;(document.activeElement as SVGElement).blur()
     }
   }
+
+  const moveRect = {
+    margin: 0,
+    vizRect: 0.8,
+    min: 0,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  }
+  $: moveRect.margin = 3 + strokeWidth * 2
+  $: moveRect.min = moveRect.margin / ((1 - moveRect.vizRect) / 2)
+
+  $: if (annotSize.width > moveRect.min) {
+    moveRect.x = moveRect.margin
+    moveRect.width = annotSize.width - moveRect.margin * 2
+  } else {
+    moveRect.x = (annotSize.width * (1 - moveRect.vizRect)) / 2
+    moveRect.width = annotSize.width * moveRect.vizRect
+  }
+
+  $: if (annotSize.height > moveRect.min) {
+    moveRect.y = moveRect.margin
+    moveRect.height = annotSize.height - moveRect.margin * 2
+  } else {
+    moveRect.y = (annotSize.height * (1 - moveRect.vizRect)) / 2
+    moveRect.height = annotSize.height * moveRect.vizRect
+  }
 </script>
 
 <svg
-  class="arrow-annot"
+  class="annotation-object rectangle"
   role="button"
   tabindex="0"
   width={annotSize.width}
@@ -97,69 +133,94 @@
   on:mouseleave={() => (annotHovered = false)}
   on:keydown={handleKeyDown}
 >
-  <!-- arrow path -->
-  <path
-    d={arrowPath}
+  <!-- rect path -->
+  <rect
+    width={annotSize.width || 0.1}
+    height={annotSize.height || 0.1}
     stroke={annotObj.opts.color}
     stroke-width={strokeWidth}
-    fill="none"
+    fill={annotObj.opts.fillColor}
   />
 
   {#if $SelectedTool === ''}
     <!-- hover elem -->
     <rect
-      x={-headLength / 2}
-      y={-headLength / 2}
+      x={-(5 + strokeWidth / 2)}
+      y={-(5 + strokeWidth / 2)}
       rx="3"
-      width={annotSize.width + headLength}
-      height={annotSize.height + headLength}
+      width={annotSize.width + (5 + strokeWidth / 2) * 2}
+      height={annotSize.height + (5 + strokeWidth / 2) * 2}
       fill="transparent"
       stroke={annotIsFocused ? '#a0a0a0' : annotHovered ? '#d3d3d3' : 'none'}
       stroke-width="1"
     />
     <!-- move controller -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <line
+    <rect
       class="move-annot"
-      x1="0"
-      y1="0"
-      x2={annotSize.width || 1}
-      y2={annotSize.height || 1}
-      stroke-width={strokeWidth * 6}
+      x={moveRect.x}
+      y={moveRect.y}
+      rx="3"
+      width={moveRect.width}
+      height={moveRect.height}
       on:mousedown={moveAnnotHandler}
     />
   {/if}
 
   {#if $SelectedTool === '' && annotIsFocused}
-    <!-- origin controller -->
+    <!-- move ne -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <circle
+      class="resize"
+      cx={annotSize.width}
+      cy="0"
+      r={4}
+      on:mousedown={(e) => {
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleNeResize, 'pointer')
+      }}
+    />
+    <!-- move nw -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
       cx="0"
       cy="0"
-      r={3.5}
+      r={4}
       on:mousedown={(e) => {
         if (e.button !== 0) return
-        attachMouseMoveListener(handleMoveOrigin, 'pointer')
+        attachMouseMoveListener(handleNwResize, 'pointer')
       }}
     />
-    <!-- pointer controller -->
+    <!-- move se -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
       cx={annotSize.width}
       cy={annotSize.height}
-      r={3.5}
+      r={4}
       on:mousedown={(e) => {
         if (e.button !== 0) return
-        attachMouseMoveListener(handleMovePointer, 'pointer')
+        attachMouseMoveListener(handleSeResize, 'pointer')
+      }}
+    />
+    <!-- move sw -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <circle
+      class="resize"
+      cx="0"
+      cy={annotSize.height}
+      r={4}
+      on:mousedown={(e) => {
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleSwResize, 'pointer')
       }}
     />
   {/if}
 </svg>
 
 <style lang="scss">
-  svg.arrow-annot {
+  .rectangle {
     position: absolute;
     box-sizing: content-box;
     border: 1px solid transparent;
@@ -176,14 +237,13 @@
 
   .move-annot {
     cursor: grab;
-    stroke: transparent; // rgba(0, 0, 0, 0.5)
-    stroke-linecap: round;
+    fill: transparent; // rgba(0, 0, 0, 0.5)
   }
 
   .resize {
     fill: #0061d1;
     stroke: #fff;
-    stroke-width: 1;
+    stroke-width: 2;
     cursor: pointer;
     z-index: 20;
   }

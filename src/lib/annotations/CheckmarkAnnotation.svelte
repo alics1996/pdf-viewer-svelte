@@ -1,30 +1,39 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { ImageAnnot } from '$annotations/classes'
+  import type { CheckMarkAnnot } from '$annotations/classes'
   import { attachMouseMoveListener } from '$utils/util'
-  import { PreventHover, SelectedTool, StoredAnnotations } from '$utils/stores'
+  import {
+    AnnotColor,
+    PreventHover,
+    SelectedTool,
+    StoredAnnotations,
+  } from '$utils/stores'
 
-  export let annotObj: ImageAnnot
+  export let annotObj: CheckMarkAnnot
+  const minWidth = 15
 
   $: annotPos = annotObj.annotPos
-  $: annotImg = annotObj.image
   $: annotSize = annotPos.size
-  $: annotPadding = 4
+  $: strokeWidth = [annotSize] && annotObj.opts.strokeWidth
+  $: offset = strokeWidth * 1.5
+
+  $: checkmarkPath =
+    `M 0,${annotSize.height / 2} ` +
+    `L ${annotSize.width / 3},${annotSize.height} ` +
+    `L ${annotSize.width},0`
 
   let annotRef: SVGElement
   let annotIsFocused = false
+
   let annotHovered = false
 
   onMount(() => {
-    const imgDims = {
-      width: annotImg.width / 1.5,
-      height: annotImg.height / 1.5,
-    }
+    annotObj.opts.color = $AnnotColor
 
-    annotPos.start.x -= imgDims.width / 2
-    annotPos.start.y += imgDims.height / 2
-    annotPos.end.x = annotPos.start.x + imgDims.width
-    annotPos.end.y = annotPos.start.y - imgDims.height
+    annotPos.start.x -= minWidth / 2
+    annotPos.start.y += minWidth / 2
+    annotPos.end.x = annotPos.start.x + minWidth
+    annotPos.end.y = annotPos.start.y - minWidth
   })
 
   $: if (annotRef) {
@@ -32,43 +41,35 @@
     annotRef.style.bottom = `${annotPos.end.y}px`
   }
 
-  function handleMouseDownResize(
-    e: MouseEvent & { currentTarget: EventTarget & SVGCircleElement },
-  ) {
-    if (e.button !== 0) return
-
-    const start = annotPos.start
-    const ratio = annotSize.width / annotSize.height
-
-    attachMouseMoveListener(handleResize, 'pointer')
-
-    function handleResize(e: MouseEvent) {
-      e.stopPropagation()
-
-      const client = annotObj.getCoords(e)
-      client.x -= annotPadding
-      client.y += annotPadding
-
-      const newWidth = client.x - start.x
-      const newHeight = start.y - client.y
-
-      const supposedWidth = newHeight * ratio
-      const supposedHeight = newWidth / ratio
-
-      if (newWidth >= supposedWidth) {
-        if (newWidth <= 0 || supposedHeight <= 0) return
-      } else {
-        if (supposedWidth <= 0 || newHeight <= 0) return
-      }
-
-      annotPos.end =
-        newWidth >= supposedWidth
-          ? { x: start.x + newWidth, y: start.y - supposedHeight }
-          : { x: start.x + supposedWidth, y: start.y - newHeight }
-    }
+  $: [$AnnotColor] && updateColor()
+  function updateColor() {
+    if (!annotIsFocused) return
+    annotObj.opts.color = $AnnotColor
   }
 
-  function moveAnnotHandler(e: MouseEvent) {
+  function handleResize(e: MouseEvent) {
+    e.stopPropagation()
+
+    const end = annotObj.getCoords(e)
+    end.x -= offset
+    end.y += offset
+
+    const start = annotPos.start
+
+    const width = end.x - start.x
+    const height = start.y - end.y
+
+    if (width <= 0 && height <= 0) return
+
+    const maxVal = Math.max(width, height, minWidth)
+    annotPos.end = {
+      x: start.x + maxVal,
+      y: start.y - maxVal,
+    }
+  }
+  function moveAnnotHandler(
+    e: MouseEvent & { currentTarget: EventTarget & SVGElement },
+  ) {
     if (e.button !== 0) {
       return
     }
@@ -100,7 +101,7 @@
 </script>
 
 <svg
-  class="image-annot"
+  class="annotation-object checkmark"
   role="button"
   tabindex="0"
   width={annotSize.width}
@@ -108,42 +109,41 @@
   bind:this={annotRef}
   on:focusin={() => (annotIsFocused = true)}
   on:focusout={() => (annotIsFocused = false)}
-  on:mouseleave={() => (annotHovered = false)}
   on:mouseenter={() => {
     if ($PreventHover) return
     annotHovered = true
   }}
+  on:mouseleave={() => (annotHovered = false)}
   on:keydown={handleKeyDown}
 >
-  <!-- image -->
-  <image
-    x="0"
-    y="0"
-    width={annotSize.width}
-    height={annotSize.height}
-    xlink:href={annotObj.base64Img}
+  <!-- checkmark path -->
+  <path
+    d={checkmarkPath}
+    stroke={annotObj.opts.color}
+    stroke-width={strokeWidth}
+    stroke-linecap="round"
+    fill="none"
   />
 
   {#if $SelectedTool === ''}
     <!-- hover elem -->
     <rect
-      x={-annotPadding}
-      y={-annotPadding}
+      x={-offset}
+      y={-offset}
       rx="3"
-      width={annotSize.width + annotPadding * 2}
-      height={annotSize.height + annotPadding * 2}
+      width={annotSize.width + offset * 2}
+      height={annotSize.height + offset * 2}
       fill="transparent"
       stroke={annotIsFocused ? '#a0a0a0' : annotHovered ? '#d3d3d3' : 'none'}
       stroke-width="1"
     />
     <!-- move controller -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <rect
+    <circle
       class="move-annot"
-      x="0"
-      y="0"
-      width={annotSize.width}
-      height={annotSize.height}
+      cx={annotSize.width / 2}
+      cy={annotSize.height / 2}
+      r={(annotSize.width + offset) / 2}
       on:mousedown={moveAnnotHandler}
     />
   {/if}
@@ -153,16 +153,19 @@
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <circle
       class="resize"
-      cx={annotSize.width + annotPadding}
-      cy={annotSize.height + annotPadding}
+      cx={annotSize.width + offset}
+      cy={annotSize.height + offset}
       r={4}
-      on:mousedown={handleMouseDownResize}
+      on:mousedown={(e) => {
+        if (e.button !== 0) return
+        attachMouseMoveListener(handleResize, 'pointer')
+      }}
     />
   {/if}
 </svg>
 
 <style lang="scss">
-  .image-annot {
+  .checkmark {
     position: absolute;
     box-sizing: content-box;
     border: 1px solid transparent;

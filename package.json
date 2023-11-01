@@ -26,11 +26,13 @@
     "vite": "^4.4.5"
   },
   "dependencies": {
+    "@fortawesome/free-regular-svg-icons": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "luxon": "^3.4.3",
     "pako": "^2.1.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
+    "svelte-awesome-color-picker": "^2.4.8",
     "svelte-fa": "^3.0.4",
     "tinycolor2": "^1.6.0"
   }

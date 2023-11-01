@@ -1,15 +1,41 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  import { IntObserver, PDFLibPages } from '$utils/stores'
+  import {
+    IntObserver,
+    PDFLibPages,
+    PreventHover,
+    SelectedTool,
+  } from '$utils/stores'
 
   import Page from '$lib/Page.svelte'
   import Toolbar from '$lib/Toolbar.svelte'
 
   import 'pdfjs-dist/web/pdf_viewer.css'
+  import SecondaryToolbar from './SecondaryToolbar.svelte'
 
   let pdfViewerDiv: HTMLElement
   let pageViewNum = 1
+
+  $: [$SelectedTool] && updateCursorStyles()
+
+  const styles = document.createElement('style')
+  styles.innerHTML =
+    '.page-container, .page-container * { cursor: crosshair !important; }\n' +
+    '.textLayer { display: none; }'
+
+  function updateCursorStyles() {
+    if ($SelectedTool !== '') {
+      window.getSelection()?.removeAllRanges()
+      ;(document.activeElement as HTMLElement | undefined)?.blur()
+
+      document.head.append(styles)
+      PreventHover.set(true)
+    } else {
+      styles.remove()
+      PreventHover.set(false)
+    }
+  }
 
   onMount(() => {
     $IntObserver = new IntersectionObserver(
@@ -33,6 +59,7 @@
 
 <div class="pdf-viewer-container">
   <Toolbar {pageViewNum} />
+  <SecondaryToolbar />
   <section class="pdf-pages-container" bind:this={pdfViewerDiv}>
     {#if $IntObserver}
       {#each $PDFLibPages as item (item.id)}
